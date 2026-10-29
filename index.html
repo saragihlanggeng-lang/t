@@ -194,14 +194,8 @@
             <div class="space-y-4">
                 <h3 class="font-serif font-bold text-lg text-gray-800 border-b border-rose-100 pb-3">Ucapan Terbaru</h3>
                 <div id="wishesContainer" class="space-y-3 max-h-72 overflow-y-auto pr-2">
-                    <!-- Dynamic wishes injected here -->
-                    <div class="bg-rose-50/60 border border-rose-100 p-4 rounded-2xl shadow-sm">
-                        <div class="flex justify-between items-center mb-1">
-                            <h4 class="font-semibold text-sm text-deepRose">Keluarga & Sahabat Tercinta</h4>
-                            <span class="text-[10px] text-gray-400">Baru saja</span>
-                        </div>
-                        <p class="text-xs text-gray-600 leading-relaxed">Selamat ulang tahun Talita Humaira Affandi! Semoga panjang umur, sehat selalu, dan tercapai semua impianmu! ✨</p>
-                    </div>
+                    <!-- Dynamic wishes injected from Firebase -->
+                    <p class="text-xs text-center text-gray-400 py-4">Memuat ucapan...</p>
                 </div>
             </div>
         </div>
@@ -218,8 +212,26 @@
         <span id="toastMessage" class="text-sm font-medium text-gray-800">Berhasil mengirim ucapan!</span>
     </div>
 
-    <!-- JavaScript Script Logic -->
-    <script>
+    <!-- JavaScript & Firebase Integration Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Konfigurasi Firebase dari project hbdd-e580d Anda
+        const firebaseConfig = {
+            apiKey: "AIzaSyBHjUFmn0bQb28PwOkgEiYbPOx3fWKjUWM",
+            authDomain: "hbdd-e580d.firebaseapp.com",
+            projectId: "hbdd-e580d",
+            storageBucket: "hbdd-e580d.firebasestorage.app",
+            messagingSenderId: "847545667014",
+            appId: "1:847545667014:web:e56a48fe367e1e618e76c7",
+            measurementId: "G-5MCTB2S86H"
+        };
+
+        // Inisialisasi Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         // Floating Hearts Generator
         const heartsContainer = document.getElementById('floatingHearts');
         const heartSymbols = ['❤️', '💖', '✨', '🌸', '🌷', '💕'];
@@ -238,12 +250,11 @@
         }
         setInterval(createHeart, 600);
 
-        // Countdown Timer simulation (Targeting upcoming birthday or general celebration countdown)
+        // Countdown Timer simulation
         function updateCountdown() {
             const now = new Date();
-            // Setting countdown target to end of day or mock future
             const currentYear = now.getFullYear();
-            const birthday = new Date(currentYear, 11, 31); // Dec 31 mock or arbitrary future date
+            const birthday = new Date(currentYear, 11, 31); 
             if (now > birthday) birthday.setFullYear(currentYear + 1);
 
             const diff = birthday - now;
@@ -279,7 +290,7 @@
             }
         });
 
-        // Wish Form Submission & Storage in Memory
+        // Wish Form & Firebase Logic
         const wishForm = document.getElementById('wishForm');
         const wishesContainer = document.getElementById('wishesContainer');
         const toast = document.getElementById('toast');
@@ -293,32 +304,69 @@
             }, 3000);
         }
 
-        wishForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('senderName').value.trim();
-            const message = document.getElementById('senderMessage').value.trim();
-
-            if (name && message) {
-                const wishCard = document.createElement('div');
-                wishCard.className = 'bg-rose-50/60 border border-rose-100 p-4 rounded-2xl shadow-sm animate-fade-in';
-                wishCard.innerHTML = `
-                    <div class="flex justify-between items-center mb-1">
-                        <h4 class="font-semibold text-sm text-deepRose">${escapeHTML(name)}</h4>
-                        <span class="text-[10px] text-gray-400">Baru saja</span>
-                    </div>
-                    <p class="text-xs text-gray-600 leading-relaxed">${escapeHTML(message)}</p>
-                `;
-                wishesContainer.prepend(wishCard);
-                wishForm.reset();
-                showToast("Yeay! Ucapanmu berhasil dikirim untuk Talita.");
-            }
-        });
-
         function escapeHTML(str) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
+
+        // Ambil data ucapan dari Firebase Firestore
+        async function loadWishes() {
+            try {
+                const q = query(collection(db, "wishes"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                wishesContainer.innerHTML = '';
+                if (querySnapshot.empty) {
+                    wishesContainer.innerHTML = '<p class="text-xs text-center text-gray-400 py-4">Belum ada ucapan. Jadilah yang pertama mengirimkan!</p>';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const wishCard = document.createElement('div');
+                    wishCard.className = 'bg-rose-50/60 border border-rose-100 p-4 rounded-2xl shadow-sm';
+                    wishCard.innerHTML = `
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="font-semibold text-sm text-deepRose">${escapeHTML(data.name)}</h4>
+                            <span class="text-[10px] text-gray-400">Baru saja</span>
+                        </div>
+                        <p class="text-xs text-gray-600 leading-relaxed">${escapeHTML(data.message)}</p>
+                    `;
+                    wishesContainer.appendChild(wishCard);
+                });
+            } catch (error) {
+                console.error("Error loading wishes: ", error);
+                wishesContainer.innerHTML = '<p class="text-xs text-center text-red-400 py-4">Gagal memuat ucapan dari database.</p>';
+            }
+        }
+
+        // Load ucapan saat halaman dibuka
+        loadWishes();
+
+        // Kirim ucapan ke Firebase Firestore saat form disubmit
+        wishForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('senderName').value.trim();
+            const message = document.getElementById('senderMessage').value.trim();
+
+            if (name && message) {
+                try {
+                    await addDoc(collection(db, "wishes"), {
+                        name: name,
+                        message: message,
+                        createdAt: serverTimestamp()
+                    });
+
+                    wishForm.reset();
+                    showToast("Yeay! Ucapanmu berhasil dikirim untuk Talita.");
+                    loadWishes(); // Refresh daftar ucapan otomatis
+                } catch (error) {
+                    console.error("Error adding document: ", error);
+                    showToast("Gagal mengirim ucapan, periksa koneksi.");
+                }
+            }
+        });
     </script>
 </body>
 </html>
