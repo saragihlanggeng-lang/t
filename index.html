@@ -95,7 +95,7 @@
 
         <!-- Birthday Countdown Card -->
         <div class="bg-white/80 backdrop-blur-md border border-rose-100 shadow-xl rounded-3xl p-6 md:p-8 w-full max-w-xl mx-auto mb-12">
-            <h3 class="font-serif text-sm uppercase tracking-widest text-deepRose font-semibold mb-4">Menuju Tanggal 3 Bulan Depan</h3>
+            <h3 class="font-serif text-sm uppercase tracking-widest text-deepRose font-semibold mb-4">Menuju 16 November</h3>
             <div class="grid grid-cols-4 gap-4 text-center">
                 <div class="bg-rose-50/80 p-3 rounded-2xl border border-rose-100">
                     <span id="days" class="block font-serif text-2xl md:text-3xl font-bold text-deepRose">00</span>
@@ -250,11 +250,18 @@
         }
         setInterval(createHeart, 600);
 
-        // Countdown Timer menuju tanggal 3 bulan depan
+        // Countdown Timer menuju tanggal 16 November
         function updateCountdown() {
             const now = new Date();
-            // Mengatur target ke tanggal 3 bulan berikutnya pada jam 00:00:00
-            const targetDate = new Date(now.getFullYear(), now.getMonth() + 1, 3, 0, 0, 0);
+            const currentYear = now.getFullYear();
+            
+            // Bulan November adalah indeks ke-10 (Januari = 0, Februari = 1, ..., November = 10)
+            let targetDate = new Date(currentYear, 10, 16, 0, 0, 0);
+
+            // Jika tanggal 16 November tahun ini sudah terlewati, targetkan ke 16 November tahun depan
+            if (now > targetDate) {
+                targetDate = new Date(currentYear + 1, 10, 16, 0, 0, 0);
+            }
 
             const diff = targetDate - now;
 
